@@ -1,0 +1,180 @@
+# -*- coding: utf-8 -*-
+"""
+============================================================================
+## Options Screener - FLASK BACKEND ##
+============================================================================
+This script is a Flask web server that acts as the backend for the
+Options Screener application. It exposes an API endpoint that the React
+frontend can call to get real options data.
+
+**How it Works:**
+1.  It uses Flask to create a web server.
+2.  CORS is enabled to allow requests from the React frontend (which runs on a different port).
+3.  It has one endpoint, `/analyze`, which accepts a POST request containing
+    the user's tickers and filter criteria.
+4.  It uses the exact same `yfinance` logic from our original Python script
+    to fetch and analyze real-time or closing market data.
+5.  It returns the results (lists of puts and calls) as a JSON response.
+
+**To Run This Backend:**
+1.  Save this file as `app.py`.
+2.  Open your terminal and create a virtual environment:
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows use venv\\Scripts\\activate
+3.  Install the required libraries:
+    pip install Flask flask-cors yfinance pandas pytz
+4.  Run the server:
+    python app.py
+5.  The server will start on http://127.0.0.1:5000. Leave this terminal window running.
+"""
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import yfinance as yf
+import pandas as pd
+from datetime import date, datetime, time, timezone
+import pytz
+
+app = Flask(__name__)
+# Enable Cross-Origin Resource Sharing to allow the frontend to communicate with this backend
+CORS(app)
+
+def get_live_or_close_price(ticker):
+    """
+    Checks if the market is open. If so, fetches the live price.
+    Otherwise, returns the last closing price.
+    """
+    market_tz = pytz.timezone('America/New_York')
+    market_open = time(9, 30)
+    market_close = time(16, 0)
+    
+    # FIX: Use timezone-aware datetime objects to avoid DeprecationWarning
+    now_et = datetime.now(market_tz)
+
+    is_market_hours = (market_open <= now_et.time() <= market_close) and (0 <= now_et.weekday() <= 4)
+    price_type = "UNKNOWN"
+
+    if is_market_hours:
+        try:
+            live_price = ticker.history(period='1d', interval='1m')['Close'].iloc[-1]
+            if not pd.isna(live_price):
+                price_type = "LIVE"
+                return live_price, price_type
+        except Exception:
+            pass
+
+    close_price = ticker.history(period='1d')['Close'].iloc[-1]
+    price_type = "CLOSE"
+    return close_price, price_type
+
+@app.route('/analyze', methods=['POST'])
+def analyze_options():
+    """
+    API endpoint to analyze options based on frontend parameters.
+    """
+    params = request.json
+    put_tickers = params.get('putTickers', '').split(',')
+    call_tickers = params.get('callTickers', '').split(',')
+    filters = params.get('filters', {})
+    
+    all_puts = []
+    all_calls = []
+    today = date.today()
+
+    # --- Process Puts ---
+    for ticker_symbol in put_tickers:
+        if not ticker_symbol: continue
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            current_price, price_type = get_live_or_close_price(ticker)
+            if pd.isna(current_price): continue
+
+            for exp_str in ticker.options:
+                exp_date = pd.to_datetime(exp_str).date()
+                dte = (exp_date - today).days
+                if not (filters.get('DTE_MIN', 0) <= dte <= filters.get('DTE_MAX', 9999)): continue
+
+                opt_chain = ticker.option_chain(exp_str)
+                puts = opt_chain.puts.to_dict('records')
+
+                use_delta_filter = 'delta' in opt_chain.puts.columns and not opt_chain.puts['delta'].isnull().all()
+
+                for p in puts:
+                    p['otmPercent'] = (current_price - p['strike']) / current_price * 100
+                    
+                    common_checks = (p.get('volume', 0) >= filters.get('MIN_VOLUME', 0) and 
+                                     p.get('openInterest', 0) >= filters.get('MIN_OPEN_INTEREST', 0))
+                    
+                    filter_passed = False
+                    if use_delta_filter:
+                        if (filters.get('PUT_DELTA_MIN', 0) <= p.get('delta', 0) <= filters.get('PUT_DELTA_MAX', 1)):
+                            filter_passed = True
+                    else: # Fallback to OTM
+                        if (filters.get('PUT_OTM_PERCENT_MIN', 0) <= p['otmPercent'] <= filters.get('PUT_OTM_PERCENT_MAX', 100)):
+                            filter_passed = True
+                    
+                    if common_checks and filter_passed:
+                        premium = p.get('bid', 0)
+                        p['ticker'] = ticker_symbol
+                        p['premium'] = premium
+                        p['DTE'] = dte
+                        p['currentPrice'] = current_price
+                        p['collateral'] = p['strike'] * 100
+                        p['weeklyReturn'] = (premium / p['strike']) / (dte / 7) * 100 if dte > 0 and p['strike'] > 0 else 0
+                        p['annualizedReturn'] = (premium / p['strike']) * (365 / dte) * 100 if dte > 0 and p['strike'] > 0 else 0
+                        all_puts.append(p)
+        except Exception as e:
+            print(f"Error processing puts for {ticker_symbol}: {e}")
+
+    # --- Process Calls ---
+    for ticker_symbol in call_tickers:
+        if not ticker_symbol: continue
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            current_price, price_type = get_live_or_close_price(ticker)
+            if pd.isna(current_price): continue
+
+            for exp_str in ticker.options:
+                exp_date = pd.to_datetime(exp_str).date()
+                dte = (exp_date - today).days
+                if not (filters.get('DTE_MIN', 0) <= dte <= filters.get('DTE_MAX', 9999)): continue
+
+                opt_chain = ticker.option_chain(exp_str)
+                calls = opt_chain.calls.to_dict('records')
+
+                use_delta_filter = 'delta' in opt_chain.calls.columns and not opt_chain.calls['delta'].isnull().all()
+
+                for c in calls:
+                    c['otmPercent'] = (c['strike'] - current_price) / current_price * 100
+                    
+                    common_checks = (c.get('volume', 0) >= filters.get('MIN_VOLUME', 0) and 
+                                     c.get('openInterest', 0) >= filters.get('MIN_OPEN_INTEREST', 0))
+                    
+                    filter_passed = False
+                    if use_delta_filter:
+                        if (filters.get('CALL_DELTA_MIN', 0) <= c.get('delta', 0) <= filters.get('CALL_DELTA_MAX', 1)):
+                            filter_passed = True
+                    else: # Fallback to OTM
+                        if (filters.get('CALL_OTM_PERCENT_MIN', 0) <= c['otmPercent'] <= filters.get('CALL_OTM_PERCENT_MAX', 100)):
+                            filter_passed = True
+                    
+                    if common_checks and filter_passed:
+                        premium = c.get('bid', 0)
+                        c['ticker'] = ticker_symbol
+                        c['premium'] = premium
+                        c['DTE'] = dte
+                        c['currentPrice'] = current_price
+                        c['collateral'] = current_price * 100
+                        c['weeklyReturn'] = (premium / current_price) / (dte / 7) * 100 if dte > 0 and current_price > 0 else 0
+                        c['annualizedReturn'] = (premium / current_price) * (365 / dte) * 100 if dte > 0 and current_price > 0 else 0
+                        all_calls.append(c)
+        except Exception as e:
+            print(f"Error processing calls for {ticker_symbol}: {e}")
+
+    return jsonify({
+        'puts': all_puts,
+        'calls': all_calls
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+
