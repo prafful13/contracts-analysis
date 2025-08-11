@@ -4,7 +4,6 @@ from datetime import date
 import logging
 from ..utils.market_data import get_risk_free_rate, calculate_greeks, get_live_or_close_price
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def analyze_income_options(params):
