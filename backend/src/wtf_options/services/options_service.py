@@ -80,7 +80,10 @@ def analyze_income_options(params):
 
                     logger.info(f"Contract {contract_name} passed all filters. Adding to results.")
                     premium = p.get('bid', 0)
+                    if premium == 0:
+                        premium = p.get('lastPrice', 0)
                     p['ticker'] = ticker_symbol
+                    p['expirationDate'] = exp_str
                     p['premium'] = premium
                     p['DTE'] = dte
                     p['currentPrice'] = current_price
@@ -151,7 +154,10 @@ def analyze_income_options(params):
 
                     logger.info(f"Contract {contract_name} passed all filters. Adding to results.")
                     premium = c.get('bid', 0)
+                    if premium == 0:
+                        premium = c.get('lastPrice', 0)
                     c['ticker'] = ticker_symbol
+                    c['expirationDate'] = exp_str
                     c['premium'] = premium
                     c['DTE'] = dte
                     c['currentPrice'] = current_price
@@ -239,6 +245,7 @@ def analyze_buy_options(params):
 
                     logger.info(f"Contract {contract_name} passed all filters. Adding to bullish calls.")
                     c['ticker'] = ticker_symbol
+                    c['expirationDate'] = exp_str
                     c['DTE'] = dte
                     c['currentPrice'] = current_price
                     c['premium'] = c.get('ask', 0)
@@ -275,6 +282,7 @@ def analyze_buy_options(params):
 
                     logger.info(f"Contract {contract_name} passed all filters. Adding to bearish puts.")
                     p['ticker'] = ticker_symbol
+                    p['expirationDate'] = exp_str
                     p['DTE'] = dte
                     p['currentPrice'] = current_price
                     p['premium'] = p.get('ask', 0)
