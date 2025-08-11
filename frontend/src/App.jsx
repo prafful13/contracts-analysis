@@ -56,6 +56,25 @@ const NumberInput = ({ value, onChange, name }) => (
 
 // --- Main Components ---
 
+const ScreenerTypeSelector = ({ screenerType, setScreenerType }) => (
+  <div className="flex justify-center mb-6">
+    <div className="flex space-x-2 p-1 bg-gray-200 dark:bg-gray-700/50 rounded-lg">
+      <button
+        onClick={() => setScreenerType('income')}
+        className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${screenerType === 'income' ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-300 shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+      >
+        💰 Income Screener
+      </button>
+      <button
+        onClick={() => setScreenerType('buy')}
+        className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${screenerType === 'buy' ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-300 shadow' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+      >
+        📈 Buy Screener
+      </button>
+    </div>
+  </div>
+);
+
 const Controls = ({ params, setParams, onAnalyze, isLoading }) => {
   const handleTickerChange = (e, type) => {
     setParams(p => ({ ...p, [type]: e.target.value.toUpperCase().split(',').map(t => t.trim()).join(',') }));
@@ -75,19 +94,34 @@ const Controls = ({ params, setParams, onAnalyze, isLoading }) => {
     }));
   };
 
+  const setScreenerType = (type) => {
+    setParams(p => ({ ...p, screenerType: type }));
+  };
+
   return (
     <Card className="p-6">
+      <ScreenerTypeSelector screenerType={params.screenerType} setScreenerType={setScreenerType} />
       <div className="flex items-center mb-4 text-xl font-bold text-gray-800 dark:text-white">
         <SlidersHorizontal className="mr-3 text-indigo-500" />
         Analysis Controls
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InputGroup label="Put Tickers (Stocks to Buy)">
-          <TextInput value={params.putTickers} onChange={(e) => handleTickerChange(e, 'putTickers')} />
-        </InputGroup>
-        <InputGroup label="Call Tickers (Stocks Owned)">
-          <TextInput value={params.callTickers} onChange={(e) => handleTickerChange(e, 'callTickers')} />
-        </InputGroup>
+        {params.screenerType === 'income' ? (
+          <>
+            <InputGroup label="Put Tickers (Stocks to Buy)">
+              <TextInput value={params.putTickers} onChange={(e) => handleTickerChange(e, 'putTickers')} />
+            </InputGroup>
+            <InputGroup label="Call Tickers (Stocks Owned)">
+              <TextInput value={params.callTickers} onChange={(e) => handleTickerChange(e, 'callTickers')} />
+            </InputGroup>
+          </>
+        ) : (
+          <div className="md:col-span-2">
+            <InputGroup label="Tickers to Analyze">
+              <TextInput value={params.putTickers} onChange={(e) => handleTickerChange(e, 'putTickers')} />
+            </InputGroup>
+          </div>
+        )}
 
         <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
           <InputGroup label="Min DTE">
@@ -104,45 +138,67 @@ const Controls = ({ params, setParams, onAnalyze, isLoading }) => {
           </InputGroup>
         </div>
 
-        <div className="p-4 bg-indigo-50 dark:bg-gray-700/50 rounded-lg md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Primary Filter (Market Hours)</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <InputGroup label="Put Δ Min">
-              <NumberInput name="PUT_DELTA_MIN" value={params.filters.PUT_DELTA_MIN} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Put Δ Max">
-              <NumberInput name="PUT_DELTA_MAX" value={params.filters.PUT_DELTA_MAX} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Call Δ Min">
-              <NumberInput name="CALL_DELTA_MIN" value={params.filters.CALL_DELTA_MIN} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Call Δ Max">
-              <NumberInput name="CALL_DELTA_MAX" value={params.filters.CALL_DELTA_MAX} onChange={handleFilterChange} />
-            </InputGroup>
-          </div>
-        </div>
+        {params.screenerType === 'income' ? (
+          <>
+            <div className="p-4 bg-indigo-50 dark:bg-gray-700/50 rounded-lg md:col-span-2">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Primary Filter (Market Hours)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InputGroup label="Put Δ Min">
+                  <NumberInput name="PUT_DELTA_MIN" value={params.filters.PUT_DELTA_MIN} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Put Δ Max">
+                  <NumberInput name="PUT_DELTA_MAX" value={params.filters.PUT_DELTA_MAX} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Call Δ Min">
+                  <NumberInput name="CALL_DELTA_MIN" value={params.filters.CALL_DELTA_MIN} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Call Δ Max">
+                  <NumberInput name="CALL_DELTA_MAX" value={params.filters.CALL_DELTA_MAX} onChange={handleFilterChange} />
+                </InputGroup>
+              </div>
+            </div>
 
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg md:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Fallback Filter (After Hours)</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <InputGroup label="Put OTM% Min">
-              <NumberInput name="PUT_OTM_PERCENT_MIN" value={params.filters.PUT_OTM_PERCENT_MIN} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Put OTM% Max">
-              <NumberInput name="PUT_OTM_PERCENT_MAX" value={params.filters.PUT_OTM_PERCENT_MAX} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Call OTM% Min">
-              <NumberInput name="CALL_OTM_PERCENT_MIN" value={params.filters.CALL_OTM_PERCENT_MIN} onChange={handleFilterChange} />
-            </InputGroup>
-            <InputGroup label="Call OTM% Max">
-              <NumberInput name="CALL_OTM_PERCENT_MAX" value={params.filters.CALL_OTM_PERCENT_MAX} onChange={handleFilterChange} />
-            </InputGroup>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg md:col-span-2">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Fallback Filter (After Hours)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InputGroup label="Put OTM% Min">
+                  <NumberInput name="PUT_OTM_PERCENT_MIN" value={params.filters.PUT_OTM_PERCENT_MIN} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Put OTM% Max">
+                  <NumberInput name="PUT_OTM_PERCENT_MAX" value={params.filters.PUT_OTM_PERCENT_MAX} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Call OTM% Min">
+                  <NumberInput name="CALL_OTM_PERCENT_MIN" value={params.filters.CALL_OTM_PERCENT_MIN} onChange={handleFilterChange} />
+                </InputGroup>
+                <InputGroup label="Call OTM% Max">
+                  <NumberInput name="CALL_OTM_PERCENT_MAX" value={params.filters.CALL_OTM_PERCENT_MAX} onChange={handleFilterChange} />
+                </InputGroup>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="p-4 bg-indigo-50 dark:bg-gray-700/50 rounded-lg md:col-span-2">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Buy Screener Filters</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <InputGroup label="Call Δ Min">
+                <NumberInput name="BUY_CALL_DELTA_MIN" value={params.filters.BUY_CALL_DELTA_MIN} onChange={handleFilterChange} />
+              </InputGroup>
+              <InputGroup label="Call Δ Max">
+                <NumberInput name="BUY_CALL_DELTA_MAX" value={params.filters.BUY_CALL_DELTA_MAX} onChange={handleFilterChange} />
+              </InputGroup>
+              <InputGroup label="Put Δ Min">
+                <NumberInput name="BUY_PUT_DELTA_MIN" value={params.filters.BUY_PUT_DELTA_MIN} onChange={handleFilterChange} />
+              </InputGroup>
+              <InputGroup label="Put Δ Max">
+                <NumberInput name="BUY_PUT_DELTA_MAX" value={params.filters.BUY_PUT_DELTA_MAX} onChange={handleFilterChange} />
+              </InputGroup>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <div className="mt-6">
         <Button onClick={onAnalyze} isLoading={isLoading}>
-          {isLoading ? 'Analyzing...' : 'Run Analysis'}
+          {isLoading ? 'Analyzing...' : `Run ${params.screenerType === 'income' ? 'Income' : 'Buy'} Analysis`}
         </Button>
       </div>
     </Card>
@@ -177,7 +233,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-const OptionsTable = ({ title, data, defaultSort, type }) => {
+const OptionsTable = ({ title, data, defaultSort, type, headers }) => {
   const [sortConfig, setSortConfig] = useState(defaultSort);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
@@ -217,26 +273,11 @@ const OptionsTable = ({ title, data, defaultSort, type }) => {
     setCurrentPage(1);
   };
 
-  const headers = [
-    { key: 'ticker', label: 'Ticker' },
-    { key: 'expirationDate', label: 'Expiry' },
-    { key: 'DTE', label: 'DTE' },
-    { key: 'strike', label: 'Strike' },
-    { key: 'currentPrice', label: 'Stock Price' },
-    { key: 'premium', label: 'Premium' },
-    { key: 'delta', label: 'Delta' },
-    { key: 'otmPercent', label: 'OTM %' },
-    { key: 'impliedVolatility', label: 'IV' },
-    { key: 'weeklyReturn', label: 'Weekly %' },
-    { key: 'annualizedReturn', label: 'Annual %' },
-    { key: 'collateral', label: 'Collateral' },
-  ];
-
   if (!data) return null;
 
   return (
     <Card className="mt-8 overflow-hidden">
-      <h2 className={`text-xl font-bold p-4 ${type === 'put' ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'}`}>
+      <h2 className={`text-xl font-bold p-4 ${type === 'put' ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200' : 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200'}`}>
         {title}
       </h2>
       <div className="overflow-x-auto">
@@ -303,7 +344,7 @@ const TabButton = ({ children, onClick, isActive }) => (
 export default function App() {
   // Use the imported object for the initial state
   const [params, setParams] = useState(DEFAULT_PARAMS);
-  const [results, setResults] = useState({ puts: null, calls: null });
+  const [results, setResults] = useState({ puts: null, calls: null, bullish_calls: null, bearish_puts: null });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('screener'); // 'screener' or 'analysis'
@@ -312,13 +353,20 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     
+    // For "buy" screener, combine tickers
+    let apiParams = { ...params };
+    if (params.screenerType === 'buy') {
+      const allTickers = [...params.putTickers.split(','), ...params.callTickers.split(',')].filter(t => t).join(',');
+      apiParams = { ...apiParams, putTickers: allTickers, callTickers: '' };
+    }
+
     try {
       const response = await fetch('http://127.0.0.1:5000/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify(apiParams),
       });
 
       if (!response.ok) {
@@ -336,15 +384,73 @@ export default function App() {
     }
   }, [params]);
 
+  const renderResults = () => {
+    const incomeHeaders = [
+      { key: 'ticker', label: 'Ticker' },
+      { key: 'expirationDate', label: 'Expiry' },
+      { key: 'DTE', label: 'DTE' },
+      { key: 'strike', label: 'Strike' },
+      { key: 'currentPrice', label: 'Stock Price' },
+      { key: 'premium', label: 'Premium' },
+      { key: 'delta', label: 'Delta' },
+      { key: 'otmPercent', label: 'OTM %' },
+      { key: 'impliedVolatility', label: 'IV' },
+      { key: 'weeklyReturn', label: 'Weekly %' },
+      { key: 'annualizedReturn', label: 'Annual %' },
+      { key: 'collateral', label: 'Collateral' },
+    ];
+
+    const buyHeaders = [
+      { key: 'buyScore', label: 'Buy Score' },
+      { key: 'ticker', label: 'Ticker' },
+      { key: 'expirationDate', label: 'Expiry' },
+      { key: 'DTE', label: 'DTE' },
+      { key: 'strike', label: 'Strike' },
+      { key: 'currentPrice', label: 'Stock Price' },
+      { key: 'premium', label: 'Premium' },
+      { key: 'delta', label: 'Delta' },
+      { key: 'impliedVolatility', label: 'IV' },
+      { key: 'volume', label: 'Volume' },
+      { key: 'openInterest', label: 'Open Int.' },
+    ];
+
+    if (params.screenerType === 'income') {
+      return (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-3">
+              <OptionsTable title="💰 Best Cash-Secured Puts to Sell" data={results.puts} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="call" headers={incomeHeaders} />
+            </div>
+            <div className="lg:col-span-3">
+              <OptionsTable title="📈 Best Covered Calls to Sell" data={results.calls} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="put" headers={incomeHeaders} />
+            </div>
+          </div>
+          <Legend />
+        </>
+      );
+    } else {
+      return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-3">
+                  <OptionsTable title="📈 Bullish Opportunities (Calls to Buy)" data={results.bullish_calls} defaultSort={{ key: 'buyScore', direction: 'descending' }} type="call" headers={buyHeaders} />
+              </div>
+              <div className="lg:col-span-3">
+                  <OptionsTable title="📉 Bearish Opportunities (Puts to Buy)" data={results.bearish_puts} defaultSort={{ key: 'buyScore', direction: 'descending' }} type="put" headers={buyHeaders} />
+              </div>
+          </div>
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <header className="text-center mb-10">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-800 dark:text-white tracking-tight">
-            Options Income <span className="text-indigo-600 dark:text-indigo-400">Screener</span>
+            Options <span className="text-indigo-600 dark:text-indigo-400">Screener</span>
           </h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Find the best cash-secured puts and covered calls based on your custom criteria.
+            Find the best options contracts based on your custom criteria.
           </p>
         </header>
 
@@ -373,15 +479,7 @@ export default function App() {
                 </Card>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-3">
-                  <OptionsTable title="💰 Best Cash-Secured Puts to Sell" data={results.puts} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="put" />
-                </div>
-                <div className="lg:col-span-3">
-                  <OptionsTable title="📈 Best Covered Calls to Sell" data={results.calls} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="call" />
-                </div>
-              </div>
-              <Legend />
+              {renderResults()}
             </>
           ) : (
             <Card className="p-6">

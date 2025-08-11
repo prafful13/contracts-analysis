@@ -40,6 +40,10 @@ app = Flask(__name__)
 # Enable Cross-Origin Resource Sharing to allow the frontend to communicate with this backend
 CORS(app)
 
+# Configure logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 def get_risk_free_rate():
     """
     Fetches the risk-free interest rate from the 13-week Treasury bill (^IRX).
@@ -108,12 +112,10 @@ def get_live_or_close_price(ticker):
     price_type = "CLOSE"
     return close_price, price_type
 
-@app.route('/analyze', methods=['POST'])
-def analyze_options():
+def analyze_income_options(params):
     """
-    API endpoint to analyze options based on frontend parameters.
+    Analyzes options for income strategies (selling puts/calls).
     """
-    params = request.json
     put_tickers = params.get('putTickers', '').split(',')
     call_tickers = params.get('callTickers', '').split(',')
     filters = params.get('filters', {})
@@ -149,7 +151,7 @@ def analyze_options():
                     
                     filter_passed = False
                     if use_delta_filter:
-                        if (filters.get('PUT_DELTA_MIN', 0) <= p.get('delta', 0) <= filters.get('PUT_DELTA_MAX', 1)):
+                        if (filters.get('PUT_DELTA_MIN', 0) <= abs(p.get('delta', 0)) <= filters.get('PUT_DELTA_MAX', 1)):
                             filter_passed = True
                     else: # Fallback to OTM
                         if (filters.get('PUT_OTM_PERCENT_MIN', 0) <= p['otmPercent'] <= filters.get('PUT_OTM_PERCENT_MAX', 100)):
@@ -225,10 +227,120 @@ def analyze_options():
         except Exception as e:
             print(f"Error processing calls for {ticker_symbol}: {e}")
 
-    return jsonify({
+    return {
         'puts': all_puts,
         'calls': all_calls
-    })
+    }
+
+def analyze_buy_options(params):
+    """
+    Analyzes options for buying strategies.
+    """
+    tickers = list(set(params.get('putTickers', '').split(',') + params.get('callTickers', '').split(',')))
+    filters = params.get('filters', {})
+
+    bullish_calls = []
+    bearish_puts = []
+    today = date.today()
+    risk_free_rate = get_risk_free_rate()
+
+    for ticker_symbol in tickers:
+        if not ticker_symbol: continue
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            current_price, price_type = get_live_or_close_price(ticker)
+            if pd.isna(current_price): continue
+
+            for exp_str in ticker.options:
+                exp_date = pd.to_datetime(exp_str).date()
+                dte = (exp_date - today).days
+                if not (filters.get('DTE_MIN', 0) <= dte <= filters.get('DTE_MAX', 9999)): continue
+
+                opt_chain = ticker.option_chain(exp_str)
+
+                # --- Process Bullish Calls ---
+                calls = opt_chain.calls.to_dict('records')
+                for c in calls:
+                    volume = c.get('volume', 0)
+                    open_interest = c.get('openInterest', 0)
+                    delta_val = c.get('delta')
+
+                    t = dte / 365.0
+                    iv = c.get('impliedVolatility', 0)
+
+                    # If yfinance fails to provide delta, calculate it manually
+                    if pd.isna(delta_val) or delta_val == 0:
+                        greeks = calculate_greeks('c', current_price, c['strike'], t, risk_free_rate, iv)
+                        delta_val = greeks.get('delta')
+                        c.update(greeks)
+
+                    delta_val = delta_val or 0
+
+                    if volume < filters.get('MIN_VOLUME', 0): continue
+                    if open_interest < filters.get('MIN_OPEN_INTEREST', 0): continue
+                    if not (filters.get('BUY_CALL_DELTA_MIN', 0.4) <= delta_val <= filters.get('BUY_CALL_DELTA_MAX', 1.0)): continue
+
+                    c['ticker'] = ticker_symbol
+                    c['DTE'] = dte
+                    c['currentPrice'] = current_price
+                    c['premium'] = c.get('ask', 0)
+
+                    c['buyScore'] = (delta_val * 100) + (volume / 100) + (open_interest / 1000)
+                    bullish_calls.append(c)
+
+                # --- Process Bearish Puts ---
+                puts = opt_chain.puts.to_dict('records')
+                for p in puts:
+                    volume = p.get('volume', 0)
+                    open_interest = p.get('openInterest', 0)
+                    delta_val = p.get('delta')
+
+                    t = dte / 365.0
+                    iv = p.get('impliedVolatility', 0)
+
+                    # If yfinance fails to provide delta, calculate it manually
+                    if pd.isna(delta_val) or delta_val == 0:
+                        greeks = calculate_greeks('p', current_price, p['strike'], t, risk_free_rate, iv)
+                        delta_val = greeks.get('delta')
+                        p.update(greeks)
+
+                    delta_val = delta_val or 0
+
+                    if volume < filters.get('MIN_VOLUME', 0): continue
+                    if open_interest < filters.get('MIN_OPEN_INTEREST', 0): continue
+                    if not (filters.get('BUY_PUT_DELTA_MIN', -1.0) <= delta_val <= filters.get('BUY_PUT_DELTA_MAX', -0.4)): continue
+
+                    p['ticker'] = ticker_symbol
+                    p['DTE'] = dte
+                    p['currentPrice'] = current_price
+                    p['premium'] = p.get('ask', 0)
+
+                    p['buyScore'] = (abs(delta_val) * 100) + (volume / 100) + (open_interest / 1000)
+                    bearish_puts.append(p)
+        except Exception as e:
+            app.logger.error(f"Error processing buy analysis for {ticker_symbol}: {e}")
+
+    return {
+        'bullish_calls': bullish_calls,
+        'bearish_puts': bearish_puts
+    }
+
+@app.route('/analyze', methods=['POST'])
+def analyze_options():
+    """
+    API endpoint to analyze options based on frontend parameters.
+    Routes to different analysis functions based on 'screenerType'.
+    """
+    params = request.json
+    screener_type = params.get('screenerType', 'income')
+    app.logger.info(f"Received request for screenerType: {screener_type}")
+
+    if screener_type == 'buy':
+        results = analyze_buy_options(params)
+    else:
+        results = analyze_income_options(params)
+
+    return jsonify(results)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
