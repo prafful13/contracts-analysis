@@ -4,8 +4,6 @@ import logging
 
 options_blueprint = Blueprint('options', __name__)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @options_blueprint.route('/analyze', methods=['POST'])

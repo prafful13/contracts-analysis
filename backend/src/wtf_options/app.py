@@ -1,16 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
 from .controllers.options_controller import options_blueprint
-import logging
-from . import config
+from .utils.log_util import log
 
 app = Flask(__name__)
 # Enable Cross-Origin Resource Sharing to allow the frontend to communicate with this backend
 CORS(app)
-
-# Configure logging
-logging.basicConfig(level=config.LOG_LEVEL)
-logging.getLogger('yfinance').setLevel(logging.INFO)
 
 app.register_blueprint(options_blueprint)
 
