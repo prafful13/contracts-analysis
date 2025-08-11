@@ -1,0 +1,43 @@
+
+.analysis-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: sans-serif;
+  line-height: 1.6;
+}
+
+.analysis-container h1,
+.analysis-container h2,
+.analysis-container h3 {
+  color: #333;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.analysis-container p {
+  margin-bottom: 1em;
+}
+
+.analysis-container ul,
+.analysis-container ol {
+  padding-left: 20px;
+}
+
+.analysis-container li {
+  margin-bottom: 0.5em;
+}
+
+.analysis-container code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.analysis-container pre {
+  background-color: #f4f4f4;
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+}

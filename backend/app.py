@@ -22,7 +22,7 @@ frontend can call to get real options data.
     python3 -m venv venv
     source venv/bin/activate  # On Windows use venv\\Scripts\\activate
 3.  Install the required libraries:
-    pip install Flask flask-cors yfinance pandas pytz
+    pip install Flask flask-cors yfinance pandas pytz py_vollib
 4.  Run the server:
     python app.py
 5.  The server will start on http://127.0.0.1:5000. Leave this terminal window running.
@@ -33,10 +33,52 @@ import yfinance as yf
 import pandas as pd
 from datetime import date, datetime, time, timezone
 import pytz
+from py_vollib.black_scholes import black_scholes
+from py_vollib.black_scholes.greeks.analytical import delta, gamma, theta, vega
 
 app = Flask(__name__)
 # Enable Cross-Origin Resource Sharing to allow the frontend to communicate with this backend
 CORS(app)
+
+def get_risk_free_rate():
+    """
+    Fetches the risk-free interest rate from the 13-week Treasury bill (^IRX).
+    """
+    try:
+        irx = yf.Ticker("^IRX")
+        # The price is given as a percentage, so divide by 100
+        risk_free_rate = irx.history(period='1d')['Close'].iloc[-1] / 100
+        if pd.isna(risk_free_rate):
+            return 0.05 # Fallback to 5%
+        return risk_free_rate
+    except Exception:
+        return 0.05 # Fallback to 5% if fetch fails
+
+def calculate_greeks(flag, S, K, t, r, iv):
+    """
+    Calculates the greeks for an option.
+    flag: 'c' for call, 'p' for put
+    S: Underlying price
+    K: Strike price
+    t: Time to expiration in years
+    r: Risk-free rate
+    iv: Implied volatility
+    """
+    try:
+        greeks = {
+            "delta": delta(flag, S, K, t, r, iv),
+            "gamma": gamma(flag, S, K, t, r, iv),
+            "theta": theta(flag, S, K, t, r, iv),
+            "vega": vega(flag, S, K, t, r, iv)
+        }
+        return greeks
+    except Exception:
+        return {
+            "delta": None,
+            "gamma": None,
+            "theta": None,
+            "vega": None
+        }
 
 def get_live_or_close_price(ticker):
     """
@@ -79,6 +121,7 @@ def analyze_options():
     all_puts = []
     all_calls = []
     today = date.today()
+    risk_free_rate = get_risk_free_rate()
 
     # --- Process Puts ---
     for ticker_symbol in put_tickers:
@@ -121,6 +164,12 @@ def analyze_options():
                         p['collateral'] = p['strike'] * 100
                         p['weeklyReturn'] = (premium / p['strike']) / (dte / 7) * 100 if dte > 0 and p['strike'] > 0 else 0
                         p['annualizedReturn'] = (premium / p['strike']) * (365 / dte) * 100 if dte > 0 and p['strike'] > 0 else 0
+                        
+                        t = dte / 365.0
+                        iv = p.get('impliedVolatility', 0)
+                        greeks = calculate_greeks('p', current_price, p['strike'], t, risk_free_rate, iv)
+                        p.update(greeks)
+                        
                         all_puts.append(p)
         except Exception as e:
             print(f"Error processing puts for {ticker_symbol}: {e}")
@@ -166,6 +215,12 @@ def analyze_options():
                         c['collateral'] = current_price * 100
                         c['weeklyReturn'] = (premium / current_price) / (dte / 7) * 100 if dte > 0 and current_price > 0 else 0
                         c['annualizedReturn'] = (premium / current_price) * (365 / dte) * 100 if dte > 0 and current_price > 0 else 0
+                        
+                        t = dte / 365.0
+                        iv = c.get('impliedVolatility', 0)
+                        greeks = calculate_greeks('c', current_price, c['strike'], t, risk_free_rate, iv)
+                        c.update(greeks)
+                        
                         all_calls.append(c)
         except Exception as e:
             print(f"Error processing calls for {ticker_symbol}: {e}")
@@ -177,4 +232,3 @@ def analyze_options():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-

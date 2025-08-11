@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronsUpDown, ServerCrash, SlidersHorizontal, Info, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronsUpDown, ServerCrash, SlidersHorizontal, Info, ArrowLeft, ArrowRight, BookOpen, BarChart2 } from 'lucide-react';
 import { DEFAULT_PARAMS } from './config.js'; // Import default parameters
+import Analysis from './Analysis.jsx';
 
 // --- Helper Components ---
 
@@ -289,6 +290,15 @@ const Legend = () => (
     </Card>
 );
 
+const TabButton = ({ children, onClick, isActive }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive
+        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+        : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>
+    {children}
+  </button>
+);
 
 export default function App() {
   // Use the imported object for the initial state
@@ -296,6 +306,7 @@ export default function App() {
   const [results, setResults] = useState({ puts: null, calls: null });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('screener'); // 'screener' or 'analysis'
 
   const analyze = useCallback(async () => {
     setIsLoading(true);
@@ -337,25 +348,46 @@ export default function App() {
           </p>
         </header>
 
+        <div className="flex justify-center mb-8">
+          <div className="flex space-x-2 p-1 bg-gray-200 dark:bg-gray-700/50 rounded-lg">
+            <TabButton onClick={() => setActiveTab('screener')} isActive={activeTab === 'screener'}>
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Screener
+            </TabButton>
+            <TabButton onClick={() => setActiveTab('analysis')} isActive={activeTab === 'analysis'}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Analysis
+            </TabButton>
+          </div>
+        </div>
+
         <main>
-          <Controls params={params} setParams={setParams} onAnalyze={analyze} isLoading={isLoading} />
-          
-          {error && (
-            <Card className="mt-8 p-4 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200 flex items-center">
-              <ServerCrash className="w-6 h-6 mr-3" />
-              <p>{error}</p>
+          {activeTab === 'screener' ? (
+            <>
+              <Controls params={params} setParams={setParams} onAnalyze={analyze} isLoading={isLoading} />
+              
+              {error && (
+                <Card className="mt-8 p-4 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200 flex items-center">
+                  <ServerCrash className="w-6 h-6 mr-3" />
+                  <p>{error}</p>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-3">
+                  <OptionsTable title="💰 Best Cash-Secured Puts to Sell" data={results.puts} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="put" />
+                </div>
+                <div className="lg:col-span-3">
+                  <OptionsTable title="📈 Best Covered Calls to Sell" data={results.calls} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="call" />
+                </div>
+              </div>
+              <Legend />
+            </>
+          ) : (
+            <Card className="p-6">
+              <Analysis />
             </Card>
           )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-3">
-              <OptionsTable title="💰 Best Cash-Secured Puts to Sell" data={results.puts} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="put" />
-            </div>
-            <div className="lg:col-span-3">
-              <OptionsTable title="📈 Best Covered Calls to Sell" data={results.calls} defaultSort={{ key: 'annualizedReturn', direction: 'descending' }} type="call" />
-            </div>
-          </div>
-          <Legend />
         </main>
         
         <footer className="text-center mt-12 text-xs text-gray-500 dark:text-gray-400">
@@ -366,4 +398,3 @@ export default function App() {
     </div>
   );
 }
-
