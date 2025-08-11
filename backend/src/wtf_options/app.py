@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from backend.controllers.options_controller import options_blueprint
+from .controllers.options_controller import options_blueprint
 import logging
 
 app = Flask(__name__)

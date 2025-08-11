@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from backend.app import app
+from wtf_options.app import app
 from datetime import date, timedelta
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def test_analyze_income_options(client, mocker):
 
     mock_ticker_instance = get_mock_ticker(mocker, puts_data, calls_data)
     mocker.patch('yfinance.Ticker', return_value=mock_ticker_instance)
-    mocker.patch('backend.utils.market_data.get_risk_free_rate', return_value=0.05)
+    mocker.patch('wtf_options.utils.market_data.get_risk_free_rate', return_value=0.05)
 
     response = client.post('/analyze', json={
         'screenerType': 'income',
@@ -79,7 +79,7 @@ def test_analyze_buy_options(client, mocker):
         return get_mock_ticker(mocker, puts_data, calls_data)
 
     mocker.patch('yfinance.Ticker', side_effect=get_mock_ticker_for_symbol)
-    mocker.patch('backend.utils.market_data.get_risk_free_rate', return_value=0.05)
+    mocker.patch('wtf_options.utils.market_data.get_risk_free_rate', return_value=0.05)
 
     response = client.post('/analyze', json={
         'screenerType': 'buy',

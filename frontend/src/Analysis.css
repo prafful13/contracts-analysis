@@ -30,6 +30,7 @@
 
 .analysis-container code {
   background-color: #f4f4f4;
+  color: #333;
   padding: 2px 4px;
   border-radius: 4px;
   font-family: monospace;
@@ -37,6 +38,7 @@
 
 .analysis-container pre {
   background-color: #f4f4f4;
+  color: #333;
   padding: 10px;
   border-radius: 4px;
   overflow-x: auto;

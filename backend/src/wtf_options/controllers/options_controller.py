@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from backend.services.options_service import analyze_income_options, analyze_buy_options
+from ..services.options_service import analyze_income_options, analyze_buy_options
 import logging
 
 options_blueprint = Blueprint('options', __name__)

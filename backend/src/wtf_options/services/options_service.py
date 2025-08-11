@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import date
 import logging
-from backend.utils.market_data import get_risk_free_rate, calculate_greeks, get_live_or_close_price
+from ..utils.market_data import get_risk_free_rate, calculate_greeks, get_live_or_close_price
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
