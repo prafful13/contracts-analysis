@@ -19,17 +19,17 @@ def setup_logging():
     console_handler.setLevel(logging.DEBUG)
 
     # Create a file handler
-    file_handler = logging.FileHandler('backend.log')
-    file_handler.setLevel(logging.DEBUG)
+    # file_handler = logging.FileHandler('backend.log')
+    # file_handler.setLevel(logging.DEBUG)
 
     # Create a formatter and set it for both handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
+    # file_handler.setFormatter(formatter)
 
     # Add the handlers to the logger
     logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+    # logger.addHandler(file_handler)
 
     # Special handling for yfinance to reduce noise
     logging.getLogger('yfinance').setLevel(logging.INFO)

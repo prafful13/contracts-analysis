@@ -1,3 +1,5 @@
+import math
+
 import yfinance as yf
 import pandas as pd
 from datetime import date
@@ -80,6 +82,7 @@ def analyze_income_options(params):
                     logger.info(f"Contract {contract_name} passed all filters. Adding to results.")
                     premium = p.get('bid', 0)
                     if premium == 0:
+                        logger.info("bid is 0, trying lastPrice")
                         premium = p.get('lastPrice', 0)
                     p['ticker'] = ticker_symbol
                     p['expirationDate'] = exp_str
@@ -89,7 +92,12 @@ def analyze_income_options(params):
                     p['collateral'] = p['strike'] * 100
                     p['weeklyReturn'] = (premium / p['strike']) / (dte / 7) * 100 if dte > 0 and p['strike'] > 0 else 0
                     p['annualizedReturn'] = (premium / p['strike']) * (365 / dte) * 100 if dte > 0 and p['strike'] > 0 else 0
+                    if math.isnan(p['volume']):
+                        p['volume'] = 0
+                    if math.isnan(p['openInterest']):
+                        p['openInterest'] = 0
 
+                    # Calculate greeks
                     t = dte / 365.0
                     iv = p.get('impliedVolatility', 0)
                     greeks = calculate_greeks('p', current_price, p['strike'], t, risk_free_rate, iv)
@@ -163,7 +171,12 @@ def analyze_income_options(params):
                     c['collateral'] = current_price * 100
                     c['weeklyReturn'] = (premium / current_price) / (dte / 7) * 100 if dte > 0 and current_price > 0 else 0
                     c['annualizedReturn'] = (premium / current_price) * (365 / dte) * 100 if dte > 0 and current_price > 0 else 0
+                    if math.isnan(c['volume']):
+                        c['volume'] = 0
+                    if math.isnan(c['openInterest']):
+                        c['openInterest'] = 0
 
+                    # Calculate greeks
                     t = dte / 365.0
                     iv = c.get('impliedVolatility', 0)
                     greeks = calculate_greeks('c', current_price, c['strike'], t, risk_free_rate, iv)
