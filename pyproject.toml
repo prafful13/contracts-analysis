@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wtf-options"
+version = "0.1.0"
+authors = [
+  { name="Prafful", email="prafful.mehrotra@gmail.com" },
+]
+description = "A simple options pricer application"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "flask",
+    "flask-cors",
+    "yfinance",
+    "pandas",
+    "py_vollib",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/prafful13/contracts-analysis" # Placeholder
+"Bug Tracker" = "https://github.com/prafful13/contracts-analysis/issues" # Placeholder
+
+[tool.setuptools.packages.find]
+where = ["backend/src"]

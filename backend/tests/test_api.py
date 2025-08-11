@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from backend.app import app
+from wtf_options.app import app
 from datetime import date, timedelta
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def test_analyze_income_options(client, mocker):
 
     mock_ticker_instance = get_mock_ticker(mocker, puts_data, calls_data)
     mocker.patch('yfinance.Ticker', return_value=mock_ticker_instance)
-    mocker.patch('backend.utils.market_data.get_risk_free_rate', return_value=0.05)
+    mocker.patch('wtf_options.utils.market_data.get_risk_free_rate', return_value=0.05)
 
     response = client.post('/analyze', json={
         'screenerType': 'income',
@@ -79,7 +79,7 @@ def test_analyze_buy_options(client, mocker):
         return get_mock_ticker(mocker, puts_data, calls_data)
 
     mocker.patch('yfinance.Ticker', side_effect=get_mock_ticker_for_symbol)
-    mocker.patch('backend.utils.market_data.get_risk_free_rate', return_value=0.05)
+    mocker.patch('wtf_options.utils.market_data.get_risk_free_rate', return_value=0.05)
 
     response = client.post('/analyze', json={
         'screenerType': 'buy',
@@ -109,3 +109,37 @@ def test_analyze_buy_options(client, mocker):
 
     assert call_tickers == ['AAPL', 'GOOG']
     assert put_tickers == ['AAPL', 'GOOG']
+
+def test_analyze_options_with_nan_values(client, mocker):
+    """
+    Test that the /analyze endpoint returns valid JSON without NaN values,
+    even when the underlying data could produce them (e.g., IV=0).
+    """
+    puts_data = {
+        'strike': [90], 'volume': [100], 'openInterest': [100], 'delta': [0.2], 'bid': [0.5], 'impliedVolatility': [0]
+    }
+    calls_data = {
+        'strike': [110], 'volume': [100], 'openInterest': [100], 'delta': [0.3], 'bid': [0.6], 'impliedVolatility': [0]
+    }
+
+    mock_ticker_instance = get_mock_ticker(mocker, puts_data, calls_data)
+    mocker.patch('yfinance.Ticker', return_value=mock_ticker_instance)
+    mocker.patch('wtf_options.utils.market_data.get_risk_free_rate', return_value=0.05)
+
+    response = client.post('/analyze', json={
+        'screenerType': 'income',
+        'putTickers': 'AAPL',
+        'callTickers': 'GOOG',
+        'filters': {
+            'DTE_MIN': 0,
+            'DTE_MAX': 30,
+            'MIN_VOLUME': 50,
+            'MIN_OPEN_INTEREST': 50
+        }
+    })
+
+    assert response.status_code == 200
+    # Check that the raw response text does not contain "NaN"
+    assert "NaN" not in response.text
+    # Check that the response can be parsed as JSON
+    assert response.json is not None

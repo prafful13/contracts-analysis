@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, time
 import pytz
 from py_vollib.black_scholes.greeks.analytical import delta, gamma, theta, vega
+import math
 
 def get_risk_free_rate():
     """
@@ -35,6 +36,10 @@ def calculate_greeks(flag, S, K, t, r, iv):
             "theta": theta(flag, S, K, t, r, iv),
             "vega": vega(flag, S, K, t, r, iv)
         }
+        # Clean NaN values from greeks
+        for k, v in greeks.items():
+            if isinstance(v, float) and math.isnan(v):
+                greeks[k] = None
         return greeks
     except Exception:
         return {

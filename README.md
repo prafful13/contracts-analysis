@@ -10,15 +10,15 @@ The application fetches real-time (or last-close) market data and presents the b
 
 ## 2. Architecture
 
-This application is built on a modern client-server architecture, separating the user interface from the data processing logic.
+This application is built on a modern client-server architecture, separating the user interface from the data processing logic. The project is organized into two main top-level directories: `frontend` and `backend`.
 
-* **Backend (Python & Flask):** A lightweight Python server built with the Flask framework. Its sole responsibility is to handle the heavy lifting:
+* **Backend (Python & Flask):** A lightweight Python server built with the Flask framework, located in the `backend` directory. Its sole responsibility is to handle the heavy lifting:
     * Receiving analysis requests from the frontend.
     * Using the `yfinance` library to fetch real options data from Yahoo Finance.
     * Filtering and analyzing thousands of contracts based on the user's criteria.
     * Sending the processed data back to the frontend as a clean JSON response.
 
-* **Frontend (React.js & Vite):** A fast, modern single-page application (SPA) built with React and Vite. Its responsibilities are:
+* **Frontend (React.js & Vite):** A fast, modern single-page application (SPA) built with React and Vite, located in the `frontend` directory. Its responsibilities are:
     * Providing an interactive and intuitive user interface with forms and controls.
     * Sending the user's parameters to the Python backend via an API call.
     * Receiving the JSON data from the backend.
@@ -37,72 +37,72 @@ Before you begin, ensure you have the following software installed on your MacBo
 
 ## 4. Local Setup and Installation
 
-To run the application locally, you will need to set up and run the backend and frontend in two separate terminal windows.
+To run the application locally, follow these steps:
 
-### Backend Setup (Terminal 1)
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd <repository-name>
+    ```
 
-1.  **Navigate to your main project folder** (e.g., `contracts-analysis`).
-2.  **Save the Backend File:** Ensure the Python Flask code is saved as `app.py` in this folder.
-3.  **Create and Activate a Python Virtual Environment:**
+2.  **Create and Activate a Python Virtual Environment:**
     ```bash
     python3 -m venv venv
     source venv/bin/activate
     ```
-4.  **Install Python Dependencies:**
-    ```bash
-    pip install Flask flask-cors yfinance pandas pytz
-    ```
 
-### Frontend Setup with Vite (Terminal 2)
-
-1.  **Navigate to your main project folder** in a new terminal window.
-2.  **Create the Vite Project:** This command creates a new `frontend` folder with a React template.
-    ```bash
-    npm create vite@latest frontend
-    ```
-3.  **Navigate into the Frontend Directory:**
-    ```bash
-    cd frontend
-    ```
-4.  **Install Dependencies:**
-    ```bash
-    npm install tailwindcss @tailwindcss/vite
-    npm install lucide-react
-    ```
-5.  update vite.config.ts with
-    ```javascript
-import { defineConfig } from 'vite'
-import tailwindcss from '@tailwindcss/vite'
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    tailwindcss(),
-  ],
-})
-    ```
-6.  update `src/index.css` to have `@import "tailwindcss";` on the first line
-8.  **Update `main.jsx`:** Open `src/main.jsx` and add `import React from 'react'` to the very first line.
+3.  **Install Dependencies:**
+    *   **Python:** Install the required Python packages from `requirements.txt`. The `-e .` flag installs the backend code as an editable package.
+        ```bash
+        pip install -r requirements.txt
+        pip install -e .
+        
+        pip install '.[test]'
+        ```
+    *   **Frontend:** Install the Node.js packages for the frontend.
+        ```bash
+        cd frontend
+        npm install
+        cd ..
+        ```
 
 ---
 
 ## 5. Running the Application
 
-1.  **Start the Backend:** In your first terminal (with the Python venv activated), run:
-    ```bash
-    python app.py
-    ```
-    The backend server will start on `http://127.0.0.1:5000`. **Keep this terminal running.**
+This project includes a convenience script to start both the backend and frontend servers concurrently.
 
-2.  **Start the Frontend:** In your second terminal (inside the `frontend` directory), run:
-    ```bash
-    npm run dev
-    ```
-    This will launch the Vite development server. Your browser should open to the local address provided (usually `http://localhost:5173`).
+**From the root of the project, run:**
+```bash
+./start.sh
+```
+
+This will:
+* Start the Python backend server.
+* Start the React frontend development server.
+* You can view the application at `http://localhost:5173`.
+
+To stop the application, you can use the `stop.sh` script:
+```bash
+./stop.sh
+```
 
 ---
 
-## 6. Deployment (Optional)
+## 6. Running Tests
+
+This project uses `pytest` for testing the backend. To run the tests, make sure you have installed the development dependencies and the package in editable mode (as described in the setup section).
+
+**From the root of the project, run:**
+```bash
+pytest backend/tests
+```
+
+This will automatically discover and run the tests in the `backend/tests/` directory.
+
+---
+
+## 7. Deployment (Optional)
 
 This application is designed for local use. Deploying it to the web would require additional steps, such as:
 

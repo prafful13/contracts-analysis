@@ -19,6 +19,12 @@ __pycache__/
 instance/
 .webassets-cache
 
+# Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
 # --- Node/React Frontend ---
 
 # Node modules
