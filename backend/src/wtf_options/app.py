@@ -9,6 +9,7 @@ CORS(app)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logging.getLogger('yfinance').setLevel(logging.INFO)
 
 app.register_blueprint(options_blueprint)
 

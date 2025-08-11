@@ -56,6 +56,8 @@ To run the application locally, follow these steps:
         ```bash
         pip install -r requirements.txt
         pip install -e .
+        
+        pip install '.[test]'
         ```
     *   **Frontend:** Install the Node.js packages for the frontend.
         ```bash

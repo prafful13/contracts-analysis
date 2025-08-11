@@ -28,6 +28,7 @@ def analyze_income_options(params):
         try:
             ticker = yf.Ticker(ticker_symbol)
             current_price, price_type = get_live_or_close_price(ticker)
+            logger.info(f"Current price for {ticker_symbol}: {current_price}, price type: {price_type}")
             if pd.isna(current_price):
                 logger.warning(f"Could not get current price for {ticker_symbol}. Skipping.")
                 continue
@@ -48,6 +49,7 @@ def analyze_income_options(params):
                 use_delta_filter = 'delta' in opt_chain.puts.columns and not opt_chain.puts['delta'].isnull().all()
 
                 for p in puts:
+                    logger.debug(f"Analyzing put {p} for {ticker_symbol} on {exp_str}")
                     contract_name = f"{ticker_symbol} {exp_str} {p['strike']}P"
                     p['otmPercent'] = (current_price - p['strike']) / current_price * 100 if current_price > 0 else 0
 
@@ -167,6 +169,7 @@ def analyze_income_options(params):
             logger.error(f"Error processing calls for {ticker_symbol}: {e}")
 
     logger.info(f"Income analysis complete. Found {len(all_puts)} puts and {len(all_calls)} calls.")
+    logger.debug(f"all_puts: {all_puts} and all_calls: {all_calls}")
     return {
         'puts': all_puts,
         'calls': all_calls
