@@ -1,111 +1,129 @@
-# Options Income Screener Application
+# Options Screener
 
-## 1. Project Overview
+A local Streamlit dashboard for screening options contracts — cash-secured puts to sell, covered calls to sell, or directional calls/puts to buy.
 
-The Options Income Screener is a web-based tool designed for options traders who focus on income-generating strategies like selling cash-secured puts and covered calls. It provides a user-friendly interface to scan the market for potentially profitable contracts based on a variety of customizable criteria.
+![Options Screener — Income mode with results](docs/screenshot.png)
 
-The application fetches real-time (or last-close) market data and presents the best opportunities in sortable tables, allowing traders to quickly identify contracts that match their specific risk tolerance and return objectives.
+## What it does
 
----
+Two screener modes:
 
-## 2. Architecture
+**Income Screener** — finds options to sell for recurring premium income:
+- **Cash-secured puts**: 0–30 DTE, delta 0.12–0.30, ranked by annualized yield on collateral
+- **Covered calls**: same parameters on stocks you already own
 
-This application is built on a modern client-server architecture, separating the user interface from the data processing logic. The project is organized into two main top-level directories: `frontend` and `backend`.
+**Buy Screener** — finds options to buy for directional positions:
+- **Bullish calls**: high-delta (0.40+) calls ranked by composite buy score
+- **Bearish puts**: same, for short bias
 
-* **Backend (Python & Flask):** A lightweight Python server built with the Flask framework, located in the `backend` directory. Its sole responsibility is to handle the heavy lifting:
-    * Receiving analysis requests from the frontend.
-    * Using the `yfinance` library to fetch real options data from Yahoo Finance.
-    * Filtering and analyzing thousands of contracts based on the user's criteria.
-    * Sending the processed data back to the frontend as a clean JSON response.
+Data is fetched live from Yahoo Finance (yfinance). Greeks are computed via Black-Scholes (py_vollib). Annualized return is the primary sort metric for income; a composite score (delta × 100 + volume ÷ 100 + open interest ÷ 1000) for buy strategies. The `Annual%` column renders as a progress bar, making the best contracts instantly scannable.
 
-* **Frontend (React.js & Vite):** A fast, modern single-page application (SPA) built with React and Vite, located in the `frontend` directory. Its responsibilities are:
-    * Providing an interactive and intuitive user interface with forms and controls.
-    * Sending the user's parameters to the Python backend via an API call.
-    * Receiving the JSON data from the backend.
-    * Displaying the results in interactive, sortable tables.
+## Architecture
 
----
-
-## 3. Prerequisites
-
-Before you begin, ensure you have the following software installed on your MacBook:
-
-1.  **Python (3.8 or newer):** You can check by opening a terminal and running `python3 --version`. If not installed, get it from [python.org](https://www.python.org/).
-2.  **Node.js (v16 or newer):** This is required to run the React frontend. It includes `npm` (Node Package Manager). You can download it from [nodejs.org](https://nodejs.org/).
-
----
-
-## 4. Local Setup and Installation
-
-To run the application locally, follow these steps:
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-name>
-    ```
-
-2.  **Create and Activate a Python Virtual Environment:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-
-3.  **Install Dependencies:**
-    *   **Python:** Install the required Python packages from `requirements.txt`. The `-e .` flag installs the backend code as an editable package.
-        ```bash
-        pip install -r requirements.txt
-        pip install -e .
-        
-        pip install '.[test]'
-        ```
-    *   **Frontend:** Install the Node.js packages for the frontend.
-        ```bash
-        cd frontend
-        npm install
-        cd ..
-        ```
-
----
-
-## 5. Running the Application
-
-This project includes a convenience script to start both the backend and frontend servers concurrently.
-
-**From the root of the project, run:**
-```bash
-./start.sh
+```
+dashboard.py                          ← Streamlit entry point
+config.yaml                           ← runtime defaults (tickers, filters)
+backend/src/wtf_options/
+    services/options_service.py       ← core screener logic
+    utils/market_data.py              ← yfinance, py_vollib, Black-Scholes Greeks
+k8s/                                  ← Kubernetes manifests (k3s via k3s-dev)
+Dockerfile.dashboard                  ← container image
+tasks.py                              ← invoke task runner
 ```
 
-This will:
-* Start the Python backend server.
-* Start the React frontend development server.
-* You can view the application at `http://localhost:5173`.
+All data is fetched at scan time — no database, no caching. The app is stateless.
 
-To stop the application, you can use the `stop.sh` script:
+## Local dev
+
 ```bash
-./stop.sh
+# one-time
+uv venv --python 3.13
+uv sync --all-groups
+
+# run
+uv run inv run          # http://localhost:8501
 ```
+
+Adjust default tickers and filter ranges in `config.yaml` — no code change needed.
+
+## Configuration
+
+`config.yaml` holds all runtime defaults. Edit this file (or the `k8s/configmap.yaml` equivalent in k3s) to change tickers and filter thresholds without rebuilding:
+
+```yaml
+screener:
+  income:
+    put_tickers: "PLTR,CEG,CLS,..."    # stocks to sell puts on
+    call_tickers: "QQQ,ARKX,..."       # stocks you own (covered calls)
+  buy:
+    tickers: "PLTR,CEG,..."
+
+filters:
+  dte_min: 0
+  dte_max: 30
+  put_delta_min: 0.0
+  put_delta_max: 0.30
+  # ... see config.yaml for full list
+```
+
+## k3s deployment
+
+Prerequisites: [k3s-dev](https://github.com/prafful13/k3s-dev) installed, Rancher Desktop running.
+
+```bash
+# 1. bootstrap namespace (one-time)
+uv run inv bootstrap          # → k3s-dev namespace add contracts-analysis
+
+# 2. build image and load into k3s
+uv run inv docker-build       # → docker build + docker save | k3s ctr images import
+
+# 3. deploy
+uv run inv k8s-apply          # → kubectl apply -f k8s/
+uv run inv k8s-status
+
+# open http://localhost:30502
+```
+
+### Manifests
+
+| File | Purpose |
+|------|---------|
+| `k8s/configmap.yaml` | Default tickers + filters (editable without rebuild) |
+| `k8s/deployment.yaml` | Single-replica pod, readiness + liveness probes |
+| `k8s/service.yaml` | NodePort 30502 → pod:8501 |
+
+The namespace (`contracts-analysis`) is created and tracked by k3s-dev via `inv bootstrap` — not owned by this repo.
+
+### Update cycle
+
+```bash
+uv run inv docker-build && uv run inv k8s-restart
+```
+
+## Invoke tasks
+
+| Task | Purpose |
+|------|---------|
+| `uv run inv run` | Start locally (port 8501) |
+| `uv run inv bootstrap` | Provision k3s namespace via k3s-dev (one-time) |
+| `uv run inv docker-build` | Build + load image into k3s containerd |
+| `uv run inv k8s-apply` | Apply all k8s manifests |
+| `uv run inv k8s-status` | Show pod/service/deploy status |
+| `uv run inv k8s-logs` | Stream pod logs |
+| `uv run inv k8s-restart` | Rolling restart |
+| `uv run inv lock-update` | Regenerate `requirements.lock` |
+
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| UI | Streamlit 1.44+ (dark theme, amber accent) |
+| Data | yfinance — Yahoo Finance API |
+| Greeks | py_vollib — Black-Scholes analytical |
+| Config | PyYAML |
+| Container | python:3.13.5-slim + uv |
+| Cluster | k3s (Rancher Desktop), namespace via k3s-dev |
 
 ---
 
-## 6. Running Tests
-
-This project uses `pytest` for testing the backend. To run the tests, make sure you have installed the development dependencies and the package in editable mode (as described in the setup section).
-
-**From the root of the project, run:**
-```bash
-pytest backend/tests
-```
-
-This will automatically discover and run the tests in the `backend/tests/` directory.
-
----
-
-## 7. Deployment (Optional)
-
-This application is designed for local use. Deploying it to the web would require additional steps, such as:
-
-* **Backend:** Hosting the Flask application on a cloud service like Heroku, AWS, or Google Cloud Platform, using a production-grade web server like Gunicorn.
-* **Frontend:** Building the React app for production (`npm run build`) and serving the static files through a service like Netlify or Vercel.
-* **CORS Configuration:** Updating the Flask backend's CORS settings to allow requests from the deployed frontend's domain.
+> **Disclaimer:** For educational and informational purposes only. Not financial advice. Data from Yahoo Finance may be delayed.

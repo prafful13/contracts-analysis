@@ -1,0 +1,24 @@
+screener:
+  income:
+    put_tickers: "PLTR,CEG,CLS,CRDO,AVAV,STRL,MP,NNE,VST,NEE,D,WMB,KMI,ENB,DUK,GEV"
+    call_tickers: "AVGO,GRAB,IREN,NVTS,QQQ,ARKX"
+  buy:
+    tickers: "PLTR,CEG,CLS,CRDO,AVAV,STRL,MP,NNE,VST,NEE"
+
+filters:
+  dte_min: 0
+  dte_max: 30
+  min_volume: 100
+  min_open_interest: 500
+  put_delta_min: 0.0
+  put_delta_max: 0.30
+  call_delta_min: 0.0
+  call_delta_max: 0.30
+  put_otm_percent_min: 5.0
+  put_otm_percent_max: 15.0
+  call_otm_percent_min: 5.0
+  call_otm_percent_max: 15.0
+  buy_call_delta_min: 0.40
+  buy_call_delta_max: 1.0
+  buy_put_delta_min: -1.0
+  buy_put_delta_max: -0.40

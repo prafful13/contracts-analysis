@@ -1,39 +1,36 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wtf-options"
-version = "0.1.0"
+name = "contracts-analysis"
+version = "0.2.0"
 authors = [
-  { name="Prafful", email="prafful.mehrotra@gmail.com" },
+  { name = "Prafful", email = "prafful.mehrotra@gmail.com" },
 ]
-description = "A simple options pricer application"
+description = "Options screener dashboard"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-]
+requires-python = ">=3.13"
 dependencies = [
-    "flask",
-    "flask-cors",
-    "yfinance",
-    "pandas",
-    "py_vollib",
+    "yfinance>=0.2.63",
+    "pandas>=2.2.3",
+    "py_vollib>=1.0.1",
+    "pytz>=2024.2",
+    "streamlit>=1.44.0",
+    "plotly>=5.26.0",
+    "pyyaml>=6.0.2",
 ]
 
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-mock"
+[dependency-groups]
+dev = [
+    "invoke>=2.2.0",
+    "pytest>=8.3.5",
+    "pytest-mock>=3.14.0",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/prafful13/contracts-analysis" # Placeholder
-"Bug Tracker" = "https://github.com/prafful13/contracts-analysis/issues" # Placeholder
+"Homepage" = "https://github.com/prafful13/contracts-analysis"
 
 [tool.setuptools.packages.find]
 where = ["backend/src"]
