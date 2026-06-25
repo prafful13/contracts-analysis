@@ -4,7 +4,6 @@ import math
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
 
 
 class TestIsNanNoneFix:
@@ -38,8 +37,8 @@ class TestIsNanNoneFix:
         }
 
     def _mock_ticker(self, put_record: dict, exp: str = "2026-09-19") -> MagicMock:
+
         import pandas as pd
-        from datetime import date
 
         ticker = MagicMock()
         ticker.options = [exp]
@@ -58,9 +57,15 @@ class TestIsNanNoneFix:
 
         with (
             patch("wtf_options.services.options_service.yf.Ticker", return_value=ticker),
-            patch("wtf_options.services.options_service.get_live_or_close_price", return_value=(150.0, "CLOSE")),
+            patch(
+                "wtf_options.services.options_service.get_live_or_close_price",
+                return_value=(150.0, "CLOSE"),
+            ),
             patch("wtf_options.services.options_service.get_risk_free_rate", return_value=0.05),
-            patch("wtf_options.services.options_service.calculate_greeks", return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1}),
+            patch(
+                "wtf_options.services.options_service.calculate_greeks",
+                return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1},
+            ),
         ):
             result = analyze_income_options(self._minimal_params())
 
@@ -77,9 +82,15 @@ class TestIsNanNoneFix:
 
         with (
             patch("wtf_options.services.options_service.yf.Ticker", return_value=ticker),
-            patch("wtf_options.services.options_service.get_live_or_close_price", return_value=(150.0, "CLOSE")),
+            patch(
+                "wtf_options.services.options_service.get_live_or_close_price",
+                return_value=(150.0, "CLOSE"),
+            ),
             patch("wtf_options.services.options_service.get_risk_free_rate", return_value=0.05),
-            patch("wtf_options.services.options_service.calculate_greeks", return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1}),
+            patch(
+                "wtf_options.services.options_service.calculate_greeks",
+                return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1},
+            ),
         ):
             result = analyze_income_options(self._minimal_params())
 
@@ -96,9 +107,15 @@ class TestIsNanNoneFix:
 
         with (
             patch("wtf_options.services.options_service.yf.Ticker", return_value=ticker),
-            patch("wtf_options.services.options_service.get_live_or_close_price", return_value=(150.0, "CLOSE")),
+            patch(
+                "wtf_options.services.options_service.get_live_or_close_price",
+                return_value=(150.0, "CLOSE"),
+            ),
             patch("wtf_options.services.options_service.get_risk_free_rate", return_value=0.05),
-            patch("wtf_options.services.options_service.calculate_greeks", return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1}),
+            patch(
+                "wtf_options.services.options_service.calculate_greeks",
+                return_value={"delta": -0.3, "gamma": 0.01, "theta": -0.05, "vega": 0.1},
+            ),
         ):
             result = analyze_income_options(self._minimal_params())
 
@@ -129,14 +146,19 @@ class TestEmptyHistoryFix:
 
         with (
             patch("wtf_options.services.options_service.yf.Ticker"),
-            patch("wtf_options.services.options_service.get_live_or_close_price", return_value=(float("nan"), "UNAVAILABLE")),
+            patch(
+                "wtf_options.services.options_service.get_live_or_close_price",
+                return_value=(float("nan"), "UNAVAILABLE"),
+            ),
             patch("wtf_options.services.options_service.get_risk_free_rate", return_value=0.05),
         ):
-            result = analyze_income_options({
-                "putTickers": "AAPL,NVDA",
-                "callTickers": "",
-                "filters": {},
-            })
+            result = analyze_income_options(
+                {
+                    "putTickers": "AAPL,NVDA",
+                    "callTickers": "",
+                    "filters": {},
+                }
+            )
 
         assert result["puts"] == []
         assert set(result["unavailable_tickers"]) == {"AAPL", "NVDA"}

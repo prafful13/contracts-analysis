@@ -1,6 +1,8 @@
 import logging
 import sys
+
 from .. import config
+
 
 def setup_logging():
     """
@@ -23,7 +25,7 @@ def setup_logging():
     # file_handler.setLevel(logging.DEBUG)
 
     # Create a formatter and set it for both handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(formatter)
     # file_handler.setFormatter(formatter)
 
@@ -32,9 +34,10 @@ def setup_logging():
     # logger.addHandler(file_handler)
 
     # Special handling for yfinance to reduce noise
-    logging.getLogger('yfinance').setLevel(logging.INFO)
+    logging.getLogger("yfinance").setLevel(logging.INFO)
 
     return logger
+
 
 # Create and configure the logger when the module is imported
 log = setup_logging()

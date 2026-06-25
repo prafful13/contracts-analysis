@@ -51,6 +51,14 @@ def k8s_restart(c):
     c.run(f"kubectl rollout restart deployment/{NS} -n {NS}")
 
 
+@task
+def check(c):
+    """Ruff lint + format check + pytest. Required gate before docker-build."""
+    c.run("uv run ruff check .", echo=True)
+    c.run("uv run ruff format --check .", echo=True)
+    c.run("uv run pytest -x -q --tb=short", echo=True)
+
+
 @task(name="lock-update")
 def lock_update(c):
     """Regenerate requirements.lock for Bazel pip.parse()."""
