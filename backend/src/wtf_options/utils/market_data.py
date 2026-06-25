@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, time
@@ -73,6 +75,12 @@ def get_live_or_close_price(ticker):
         except Exception:
             pass
 
-    close_price = ticker.history(period='1d')['Close'].iloc[-1]
+    try:
+        hist = ticker.history(period='1d')['Close']
+        if hist.empty:
+            raise IndexError("empty history")
+        close_price = hist.iloc[-1]
+    except Exception:
+        return float('nan'), "UNAVAILABLE"
     price_type = "CLOSE"
     return close_price, price_type

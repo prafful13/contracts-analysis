@@ -346,6 +346,9 @@ if "results" in st.session_state:
     if last_screener == "Income":
         puts = results.get("puts", [])
         calls = results.get("calls", [])
+        unavailable = results.get("unavailable_tickers", [])
+        if unavailable:
+            st.warning(f"Price data unavailable for: {', '.join(unavailable)} — market may be closed or tickers delisted. These were excluded from results.")
         all_returns = [r["annualizedReturn"] for r in puts + calls if r.get("annualizedReturn")]
 
         m1, m2, m3, m4 = st.columns(4)
@@ -363,6 +366,9 @@ if "results" in st.session_state:
     else:
         bull = results.get("bullish_calls", [])
         bear = results.get("bearish_puts", [])
+        unavailable = results.get("unavailable_tickers", [])
+        if unavailable:
+            st.warning(f"Price data unavailable for: {', '.join(unavailable)} — market may be closed or tickers delisted. These were excluded from results.")
         all_scores = [r["buyScore"] for r in bull + bear if r.get("buyScore")]
 
         m1, m2, m3, m4 = st.columns(4)

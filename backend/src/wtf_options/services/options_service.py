@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 import yfinance as yf
@@ -19,6 +21,7 @@ def analyze_income_options(params):
 
     all_puts = []
     all_calls = []
+    unavailable_tickers: list[str] = []
     today = date.today()
     risk_free_rate = get_risk_free_rate()
 
@@ -32,6 +35,7 @@ def analyze_income_options(params):
             logger.info(f"Current price for {ticker_symbol}: {current_price}, price type: {price_type}")
             if pd.isna(current_price):
                 logger.warning(f"Could not get current price for {ticker_symbol}. Skipping.")
+                unavailable_tickers.append(ticker_symbol)
                 continue
 
             for exp_str in ticker.options:
@@ -51,6 +55,10 @@ def analyze_income_options(params):
 
                 for p in puts:
                     logger.debug(f"Analyzing put {p} for {ticker_symbol} on {exp_str}")
+                    if pd.isna(p.get('volume')):
+                        p['volume'] = 0
+                    if pd.isna(p.get('openInterest')):
+                        p['openInterest'] = 0
                     contract_name = f"{ticker_symbol} {exp_str} {p['strike']}P"
                     p['otmPercent'] = (current_price - p['strike']) / current_price * 100 if current_price > 0 else 0
 
@@ -92,10 +100,6 @@ def analyze_income_options(params):
                     p['collateral'] = p['strike'] * 100
                     p['weeklyReturn'] = (premium / p['strike']) / (dte / 7) * 100 if dte > 0 and p['strike'] > 0 else 0
                     p['annualizedReturn'] = (premium / p['strike']) * (365 / dte) * 100 if dte > 0 and p['strike'] > 0 else 0
-                    if math.isnan(p['volume']):
-                        p['volume'] = 0
-                    if math.isnan(p['openInterest']):
-                        p['openInterest'] = 0
 
                     # Calculate greeks
                     t = dte / 365.0
@@ -116,6 +120,7 @@ def analyze_income_options(params):
             current_price, price_type = get_live_or_close_price(ticker)
             if pd.isna(current_price):
                 logger.warning(f"Could not get current price for {ticker_symbol}. Skipping.")
+                unavailable_tickers.append(ticker_symbol)
                 continue
 
             for exp_str in ticker.options:
@@ -133,6 +138,10 @@ def analyze_income_options(params):
                 use_delta_filter = 'delta' in opt_chain.calls.columns and not opt_chain.calls['delta'].isnull().all()
 
                 for c in calls:
+                    if pd.isna(c.get('volume')):
+                        c['volume'] = 0
+                    if pd.isna(c.get('openInterest')):
+                        c['openInterest'] = 0
                     contract_name = f"{ticker_symbol} {exp_str} {c['strike']}C"
                     c['otmPercent'] = (c['strike'] - current_price) / current_price * 100 if current_price > 0 else 0
 
@@ -171,10 +180,6 @@ def analyze_income_options(params):
                     c['collateral'] = current_price * 100
                     c['weeklyReturn'] = (premium / current_price) / (dte / 7) * 100 if dte > 0 and current_price > 0 else 0
                     c['annualizedReturn'] = (premium / current_price) * (365 / dte) * 100 if dte > 0 and current_price > 0 else 0
-                    if math.isnan(c['volume']):
-                        c['volume'] = 0
-                    if math.isnan(c['openInterest']):
-                        c['openInterest'] = 0
 
                     # Calculate greeks
                     t = dte / 365.0
@@ -190,7 +195,8 @@ def analyze_income_options(params):
     logger.debug(f"all_puts: {all_puts} and all_calls: {all_calls}")
     return {
         'puts': all_puts,
-        'calls': all_calls
+        'calls': all_calls,
+        'unavailable_tickers': unavailable_tickers,
     }
 
 def analyze_buy_options(params):
@@ -204,6 +210,7 @@ def analyze_buy_options(params):
 
     bullish_calls = []
     bearish_puts = []
+    unavailable_tickers: list[str] = []
     today = date.today()
     risk_free_rate = get_risk_free_rate()
 
@@ -215,6 +222,7 @@ def analyze_buy_options(params):
             current_price, price_type = get_live_or_close_price(ticker)
             if pd.isna(current_price):
                 logger.warning(f"Could not get current price for {ticker_symbol}. Skipping.")
+                unavailable_tickers.append(ticker_symbol)
                 continue
 
             for exp_str in ticker.options:
@@ -306,5 +314,6 @@ def analyze_buy_options(params):
     logger.info(f"Buy analysis complete. Found {len(bullish_calls)} bullish calls and {len(bearish_puts)} bearish puts.")
     return {
         'bullish_calls': bullish_calls,
-        'bearish_puts': bearish_puts
+        'bearish_puts': bearish_puts,
+        'unavailable_tickers': unavailable_tickers,
     }
