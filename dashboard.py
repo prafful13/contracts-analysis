@@ -1,4 +1,5 @@
 """Options Screener — Streamlit dashboard."""
+
 from __future__ import annotations
 
 import logging
@@ -10,7 +11,10 @@ import streamlit as st
 import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "src"))
-from wtf_options.services.options_service import analyze_buy_options, analyze_income_options  # noqa: E402
+from wtf_options.services.options_service import (  # noqa: E402
+    analyze_buy_options,
+    analyze_income_options,
+)
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -31,7 +35,8 @@ FILTERS = _CFG["filters"]
 SCREENER = _CFG["screener"]
 
 # ── CSS ─────────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -122,19 +127,37 @@ header { visibility: hidden; }
     height: auto !important;
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Column definitions ───────────────────────────────────────────────────────
 INCOME_COLS = [
-    "ticker", "expirationDate", "DTE", "strike", "currentPrice",
-    "premium", "delta", "otmPercent", "impliedVolatility",
-    "weeklyReturn", "annualizedReturn",
+    "ticker",
+    "expirationDate",
+    "DTE",
+    "strike",
+    "currentPrice",
+    "premium",
+    "delta",
+    "otmPercent",
+    "impliedVolatility",
+    "weeklyReturn",
+    "annualizedReturn",
 ]
 
 BUY_COLS = [
-    "buyScore", "ticker", "expirationDate", "DTE", "strike",
-    "currentPrice", "premium", "delta", "impliedVolatility",
-    "volume", "openInterest",
+    "buyScore",
+    "ticker",
+    "expirationDate",
+    "DTE",
+    "strike",
+    "currentPrice",
+    "premium",
+    "delta",
+    "impliedVolatility",
+    "volume",
+    "openInterest",
 ]
 
 
@@ -149,19 +172,23 @@ def _col_config(df: pd.DataFrame, sort_col: str) -> dict:
         "currentPrice": st.column_config.NumberColumn("Price", format="$%.2f"),
         "premium": st.column_config.NumberColumn("Premium", format="$%.3f"),
         "delta": st.column_config.NumberColumn(
-            "Δ", format="%.3f",
+            "Δ",
+            format="%.3f",
             help="Probability of expiring ITM (0–1). Selling: lower is safer.",
         ),
         "otmPercent": st.column_config.NumberColumn(
-            "OTM%", format="%.1f%%",
+            "OTM%",
+            format="%.1f%%",
             help="Strike distance from stock price. Higher = more conservative.",
         ),
         "impliedVolatility": st.column_config.NumberColumn(
-            "IV", format="%.1f%%",
+            "IV",
+            format="%.1f%%",
             help="Implied volatility — market's expectation of future moves.",
         ),
         "weeklyReturn": st.column_config.NumberColumn(
-            "Wkly%", format="%.2f%%",
+            "Wkly%",
+            format="%.2f%%",
             help="Premium / Collateral × (7 / DTE)",
         ),
         "annualizedReturn": st.column_config.ProgressColumn(
@@ -173,7 +200,8 @@ def _col_config(df: pd.DataFrame, sort_col: str) -> dict:
             help="Premium / Collateral × (365 / DTE) — primary income metric.",
         ),
         "collateral": st.column_config.NumberColumn(
-            "Collateral", format="$%d",
+            "Collateral",
+            format="$%d",
             help="Cash required to secure 1 contract (100 shares × strike).",
         ),
         "buyScore": st.column_config.ProgressColumn(
@@ -194,13 +222,11 @@ def render_table(data: list[dict], cols: list[str], sort_col: str, label: str) -
         return
 
     available = [c for c in cols if c in data[0]]
-    df = (
-        pd.DataFrame(data)[available]
-        .sort_values(sort_col, ascending=False)
-        .reset_index(drop=True)
-    )
+    df = pd.DataFrame(data)[available].sort_values(sort_col, ascending=False).reset_index(drop=True)
 
-    st.dataframe(df, column_config=_col_config(df, sort_col), use_container_width=True, hide_index=True)
+    st.dataframe(
+        df, column_config=_col_config(df, sort_col), use_container_width=True, hide_index=True
+    )
 
     col_dl, col_ct, _ = st.columns([1, 1, 5])
     with col_dl:
@@ -226,7 +252,9 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    screener_type = st.radio("Mode", ["Income", "Buy"], horizontal=True, label_visibility="collapsed")
+    screener_type = st.radio(
+        "Mode", ["Income", "Buy"], horizontal=True, label_visibility="collapsed"
+    )
 
     st.markdown('<span class="sidebar-label">Tickers</span>', unsafe_allow_html=True)
     if screener_type == "Income":
@@ -249,41 +277,71 @@ with st.sidebar:
     st.markdown('<span class="sidebar-label">DTE & Liquidity</span>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        dte_min = st.number_input("DTE Min", min_value=0, max_value=365, value=int(FILTERS["dte_min"]))
+        dte_min = st.number_input(
+            "DTE Min", min_value=0, max_value=365, value=int(FILTERS["dte_min"])
+        )
     with c2:
-        dte_max = st.number_input("DTE Max", min_value=0, max_value=365, value=int(FILTERS["dte_max"]))
+        dte_max = st.number_input(
+            "DTE Max", min_value=0, max_value=365, value=int(FILTERS["dte_max"])
+        )
     c3, c4 = st.columns(2)
     with c3:
         min_volume = st.number_input("Min Volume", min_value=0, value=int(FILTERS["min_volume"]))
     with c4:
         min_oi = st.number_input("Min OI", min_value=0, value=int(FILTERS["min_open_interest"]))
 
-    st.markdown('<span class="sidebar-label">Δ Delta — Primary Filter</span>', unsafe_allow_html=True)
+    st.markdown(
+        '<span class="sidebar-label">Δ Delta — Primary Filter</span>', unsafe_allow_html=True
+    )
     if screener_type == "Income":
         c5, c6 = st.columns(2)
         with c5:
-            put_delta_min = st.number_input("Put Δ Min", 0.0, 1.0, float(FILTERS["put_delta_min"]), 0.01, "%.2f")
-            call_delta_min = st.number_input("Call Δ Min", 0.0, 1.0, float(FILTERS["call_delta_min"]), 0.01, "%.2f")
+            put_delta_min = st.number_input(
+                "Put Δ Min", 0.0, 1.0, float(FILTERS["put_delta_min"]), 0.01, "%.2f"
+            )
+            call_delta_min = st.number_input(
+                "Call Δ Min", 0.0, 1.0, float(FILTERS["call_delta_min"]), 0.01, "%.2f"
+            )
         with c6:
-            put_delta_max = st.number_input("Put Δ Max", 0.0, 1.0, float(FILTERS["put_delta_max"]), 0.01, "%.2f")
-            call_delta_max = st.number_input("Call Δ Max", 0.0, 1.0, float(FILTERS["call_delta_max"]), 0.01, "%.2f")
+            put_delta_max = st.number_input(
+                "Put Δ Max", 0.0, 1.0, float(FILTERS["put_delta_max"]), 0.01, "%.2f"
+            )
+            call_delta_max = st.number_input(
+                "Call Δ Max", 0.0, 1.0, float(FILTERS["call_delta_max"]), 0.01, "%.2f"
+            )
         with st.expander("OTM% Fallback (after hours)"):
             st.caption("Used when delta is unavailable (market closed).")
             c7, c8 = st.columns(2)
             with c7:
-                put_otm_min = st.number_input("Put OTM% Min", 0.0, 100.0, float(FILTERS["put_otm_percent_min"]), 0.5, "%.1f")
-                call_otm_min = st.number_input("Call OTM% Min", 0.0, 100.0, float(FILTERS["call_otm_percent_min"]), 0.5, "%.1f")
+                put_otm_min = st.number_input(
+                    "Put OTM% Min", 0.0, 100.0, float(FILTERS["put_otm_percent_min"]), 0.5, "%.1f"
+                )
+                call_otm_min = st.number_input(
+                    "Call OTM% Min", 0.0, 100.0, float(FILTERS["call_otm_percent_min"]), 0.5, "%.1f"
+                )
             with c8:
-                put_otm_max = st.number_input("Put OTM% Max", 0.0, 100.0, float(FILTERS["put_otm_percent_max"]), 0.5, "%.1f")
-                call_otm_max = st.number_input("Call OTM% Max", 0.0, 100.0, float(FILTERS["call_otm_percent_max"]), 0.5, "%.1f")
+                put_otm_max = st.number_input(
+                    "Put OTM% Max", 0.0, 100.0, float(FILTERS["put_otm_percent_max"]), 0.5, "%.1f"
+                )
+                call_otm_max = st.number_input(
+                    "Call OTM% Max", 0.0, 100.0, float(FILTERS["call_otm_percent_max"]), 0.5, "%.1f"
+                )
     else:
         c5, c6 = st.columns(2)
         with c5:
-            buy_call_delta_min = st.number_input("Call Δ Min", 0.0, 1.0, float(FILTERS["buy_call_delta_min"]), 0.01, "%.2f")
-            buy_put_delta_max = st.number_input("Put Δ Max", -1.0, 0.0, float(FILTERS["buy_put_delta_max"]), 0.01, "%.2f")
+            buy_call_delta_min = st.number_input(
+                "Call Δ Min", 0.0, 1.0, float(FILTERS["buy_call_delta_min"]), 0.01, "%.2f"
+            )
+            buy_put_delta_max = st.number_input(
+                "Put Δ Max", -1.0, 0.0, float(FILTERS["buy_put_delta_max"]), 0.01, "%.2f"
+            )
         with c6:
-            buy_call_delta_max = st.number_input("Call Δ Max", 0.0, 1.0, float(FILTERS["buy_call_delta_max"]), 0.01, "%.2f")
-            buy_put_delta_min = st.number_input("Put Δ Min", -1.0, 0.0, float(FILTERS["buy_put_delta_min"]), 0.01, "%.2f")
+            buy_call_delta_max = st.number_input(
+                "Call Δ Max", 0.0, 1.0, float(FILTERS["buy_call_delta_max"]), 0.01, "%.2f"
+            )
+            buy_put_delta_min = st.number_input(
+                "Put Δ Min", -1.0, 0.0, float(FILTERS["buy_put_delta_min"]), 0.01, "%.2f"
+            )
 
     st.markdown("<br>", unsafe_allow_html=True)
     run_btn = st.button("▶  Run Scan", type="primary", use_container_width=True)
@@ -298,27 +356,33 @@ def _build_params() -> dict:
         "MIN_OPEN_INTEREST": min_oi,
     }
     if screener_type == "Income":
-        filters.update({
-            "PUT_DELTA_MIN": put_delta_min,
-            "PUT_DELTA_MAX": put_delta_max,
-            "CALL_DELTA_MIN": call_delta_min,
-            "CALL_DELTA_MAX": call_delta_max,
-            "PUT_OTM_PERCENT_MIN": put_otm_min,
-            "PUT_OTM_PERCENT_MAX": put_otm_max,
-            "CALL_OTM_PERCENT_MIN": call_otm_min,
-            "CALL_OTM_PERCENT_MAX": call_otm_max,
-        })
+        filters.update(
+            {
+                "PUT_DELTA_MIN": put_delta_min,
+                "PUT_DELTA_MAX": put_delta_max,
+                "CALL_DELTA_MIN": call_delta_min,
+                "CALL_DELTA_MAX": call_delta_max,
+                "PUT_OTM_PERCENT_MIN": put_otm_min,
+                "PUT_OTM_PERCENT_MAX": put_otm_max,
+                "CALL_OTM_PERCENT_MIN": call_otm_min,
+                "CALL_OTM_PERCENT_MAX": call_otm_max,
+            }
+        )
     else:
-        filters.update({
-            "BUY_CALL_DELTA_MIN": buy_call_delta_min,
-            "BUY_CALL_DELTA_MAX": buy_call_delta_max,
-            "BUY_PUT_DELTA_MIN": buy_put_delta_min,
-            "BUY_PUT_DELTA_MAX": buy_put_delta_max,
-        })
+        filters.update(
+            {
+                "BUY_CALL_DELTA_MIN": buy_call_delta_min,
+                "BUY_CALL_DELTA_MAX": buy_call_delta_max,
+                "BUY_PUT_DELTA_MIN": buy_put_delta_min,
+                "BUY_PUT_DELTA_MAX": buy_put_delta_max,
+            }
+        )
     return {
         "screenerType": screener_type.lower(),
         "putTickers": put_tickers_raw.upper().replace(" ", "").strip(","),
-        "callTickers": call_tickers_raw.upper().replace(" ", "").strip(",") if call_tickers_raw else "",
+        "callTickers": call_tickers_raw.upper().replace(" ", "").strip(",")
+        if call_tickers_raw
+        else "",
         "filters": filters,
     }
 
@@ -346,6 +410,11 @@ if "results" in st.session_state:
     if last_screener == "Income":
         puts = results.get("puts", [])
         calls = results.get("calls", [])
+        unavailable = results.get("unavailable_tickers", [])
+        if unavailable:
+            st.warning(
+                f"Price data unavailable for: {', '.join(unavailable)} — market may be closed or tickers delisted. These were excluded from results."
+            )
         all_returns = [r["annualizedReturn"] for r in puts + calls if r.get("annualizedReturn")]
 
         m1, m2, m3, m4 = st.columns(4)
@@ -363,6 +432,11 @@ if "results" in st.session_state:
     else:
         bull = results.get("bullish_calls", [])
         bear = results.get("bearish_puts", [])
+        unavailable = results.get("unavailable_tickers", [])
+        if unavailable:
+            st.warning(
+                f"Price data unavailable for: {', '.join(unavailable)} — market may be closed or tickers delisted. These were excluded from results."
+            )
         all_scores = [r["buyScore"] for r in bull + bear if r.get("buyScore")]
 
         m1, m2, m3, m4 = st.columns(4)
